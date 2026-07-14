@@ -1491,20 +1491,6 @@ def handle_model_response_chunk(
                 else:
                     model_response.reasoning_content += model_response_event.redacted_reasoning_content
                 run_response.reasoning_content = model_response.reasoning_content
-                # Emit delta for redacted reasoning (Claude extended thinking
-                # may redact parts of the reasoning chain for safety).
-                if stream_events and model_response_event.redacted_reasoning_content:
-                    yield handle_event(  # type: ignore
-                        create_reasoning_content_delta_event(
-                            from_run_response=run_response,
-                            reasoning_content=model_response_event.redacted_reasoning_content,
-                        ),
-                        run_response,
-                        events_to_skip=agent.events_to_skip,  # type: ignore
-                        store_events=agent.store_events,
-                    )
-                    if reasoning_state is not None:
-                        reasoning_state["native_reasoning_streamed"] = True
 
             # Handle provider data (one chunk)
             if model_response_event.provider_data is not None:

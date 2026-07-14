@@ -1448,18 +1448,6 @@ def _handle_model_response_chunk(
                     full_model_response.reasoning_content += model_response_event.redacted_reasoning_content
                 run_response.reasoning_content = full_model_response.reasoning_content
                 should_yield = True
-                # Emit delta for redacted reasoning (Claude extended thinking
-                # may redact parts of the reasoning chain for safety).
-                if stream_events:
-                    yield handle_event(  # type: ignore
-                        create_team_reasoning_content_delta_event(
-                            from_run_response=run_response,
-                            reasoning_content=model_response_event.redacted_reasoning_content,
-                        ),
-                        run_response,
-                        events_to_skip=team.events_to_skip,
-                        store_events=team.store_events,
-                    )
 
             # Handle provider data (one chunk)
             if model_response_event.provider_data is not None:
