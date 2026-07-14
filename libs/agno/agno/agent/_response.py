@@ -1434,6 +1434,24 @@ def handle_model_response_chunk(
                     model_response.reasoning_content or ""
                 ) + model_response_event.reasoning_content
                 run_response.reasoning_content = model_response.reasoning_content
+                # Also yield a dedicated reasoning delta so consumers like
+                # AGUI / AgentOS light up the reasoning panel during
+                # streaming. Without this, models that stream reasoning
+                # from the main call (Claude w/ thinking, OpenAI o-series
+                # on Responses API, Gemini thinking, GeminiInteractions
+                # agent path) only reach the panel via the explicit
+                # ReasoningManager pre-call pattern, which doesn't fit
+                # models where reasoning is interleaved with tool calls.
+                if stream_events and model_response_event.reasoning_content:
+                    yield handle_event(  # type: ignore
+                        create_reasoning_content_delta_event(
+                            from_run_response=run_response,
+                            reasoning_content=model_response_event.reasoning_content,
+                        ),
+                        run_response,
+                        events_to_skip=agent.events_to_skip,  # type: ignore
+                        store_events=agent.store_events,
+                    )
 
             if model_response_event.redacted_reasoning_content is not None:
                 if not model_response.reasoning_content:
@@ -1441,21 +1459,6 @@ def handle_model_response_chunk(
                 else:
                     model_response.reasoning_content += model_response_event.redacted_reasoning_content
                 run_response.reasoning_content = model_response.reasoning_content
-
-            # Emit ReasoningContentDeltaEvent for streaming consumers (AG-UI, /runs, etc.)
-            # model_response_event.reasoning_content is the per-chunk delta;
-            # the accumulated value is already on run_response.reasoning_content above.
-            reasoning_delta = model_response_event.reasoning_content or model_response_event.redacted_reasoning_content
-            if stream_events and reasoning_delta:
-                yield handle_event(  # type: ignore
-                    create_reasoning_content_delta_event(
-                        from_run_response=run_response,
-                        reasoning_content=reasoning_delta,
-                    ),
-                    run_response,
-                    events_to_skip=agent.events_to_skip,  # type: ignore
-                    store_events=agent.store_events,
-                )
 
             # Handle provider data (one chunk)
             if model_response_event.provider_data is not None:
