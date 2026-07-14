@@ -393,3 +393,33 @@ def test_handle_model_response_chunk_skips_reasoning_event_when_not_streaming():
 
     assert not any(isinstance(e, ReasoningContentDeltaEvent) for e in events)
     assert run_response.reasoning_content == "Thinking..."
+
+
+def test_handle_model_response_chunk_emits_delta_for_redacted_reasoning():
+    """OpenAI o-series may return redacted_reasoning_content. The chunk
+    handler must also emit a ReasoningContentDeltaEvent for those chunks."""
+    from agno.agent._response import handle_model_response_chunk
+    from agno.models.response import ModelResponse, ModelResponseEvent
+    from agno.run.agent import ReasoningContentDeltaEvent
+
+    agent, session, run_response, model_response = _make_chunk_handler_mocks()
+
+    chunk = ModelResponse(
+        event=ModelResponseEvent.assistant_response.value,
+        redacted_reasoning_content="[REDACTED]",
+    )
+
+    events = list(
+        handle_model_response_chunk(
+            agent=agent,
+            session=session,
+            run_response=run_response,
+            model_response=model_response,
+            model_response_event=chunk,
+            stream_events=True,
+        )
+    )
+
+    reasoning_events = [e for e in events if isinstance(e, ReasoningContentDeltaEvent)]
+    assert len(reasoning_events) == 1
+    assert reasoning_events[0].reasoning_content == "[REDACTED]"
