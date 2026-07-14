@@ -1491,8 +1491,8 @@ def handle_model_response_chunk(
                 else:
                     model_response.reasoning_content += model_response_event.redacted_reasoning_content
                 run_response.reasoning_content = model_response.reasoning_content
-                # Emit delta for redacted reasoning (OpenAI o-series may redact
-                # parts of the reasoning chain).
+                # Emit delta for redacted reasoning (Claude extended thinking
+                # may redact parts of the reasoning chain for safety).
                 if stream_events and model_response_event.redacted_reasoning_content:
                     yield handle_event(  # type: ignore
                         create_reasoning_content_delta_event(
